@@ -99,7 +99,7 @@ def render():
             st.json(_get_schema())
 
     # ── Run button ─────────────────────────────────────────────────────
-    if st.button("🚀 Generate Structured Response", type="primary", use_container_width=True, key="day03_run"):
+    if st.button("🚀 Generate Structured Response", type="primary", width="stretch", key="day03_run"):
         if not question or not question.strip():
             st.warning("Please enter a question.")
             return

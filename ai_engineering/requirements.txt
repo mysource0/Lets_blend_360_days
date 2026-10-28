@@ -30,3 +30,8 @@ uvicorn==0.54.0
 # Required FastAPI transitive packages downloaded during Day 4 setup
 annotated-doc==0.0.5
 opentelemetry-api==1.45.1
+
+
+
+#python -m pip install --upgrade pip
+langsmith==0.14.14

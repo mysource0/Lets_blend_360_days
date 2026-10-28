@@ -84,7 +84,7 @@ def render():
         )
 
     # ── Run button ─────────────────────────────────────────────────────
-    if st.button("🚀 Compare All 3 Versions", type="primary", use_container_width=True, key="day02_run"):
+    if st.button("🚀 Compare All 3 Versions", type="primary", width="stretch", key="day02_run"):
         if not question or not question.strip():
             st.warning("Please enter a question first.")
             return

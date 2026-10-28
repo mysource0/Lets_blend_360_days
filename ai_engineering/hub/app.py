@@ -1,5 +1,5 @@
 """
-AI Engineering Hub — Unified Streamlit application for Days 01–10.
+AI Engineering Hub — Unified Streamlit application for Days 01–11.
 
 Launch:
     cd ai_engineering
@@ -28,12 +28,9 @@ st.set_page_config(
 # ── Premium CSS ────────────────────────────────────────────────────────
 st.markdown("""
 <style>
-    /* Import Inter font */
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-
-    /* Global font */
+    /* Global font: uses a locally installed font, with no external request */
     html, body, [class*="css"] {
-        font-family: 'Inter', sans-serif;
+        font-family: 'Inter', 'Segoe UI', system-ui, -apple-system, sans-serif;
     }
 
     /* Sidebar styling */
@@ -134,6 +131,7 @@ st.markdown("""
 
 # ── Sidebar ────────────────────────────────────────────────────────────
 from components.sidebar import render_sidebar, DAYS
+from config import SHOW_TRACEBACKS
 selected_day = render_sidebar()
 
 # ── Page header ────────────────────────────────────────────────────────
@@ -141,7 +139,7 @@ icon, name, desc = DAYS[selected_day]
 st.markdown(
     f"""<div class="hub-header">
         <h1>{icon} {name} — {desc}</h1>
-        <p>AI Engineering • 10-Day Learning Journey</p>
+        <p>AI Engineering • 11-Day Learning Journey</p>
     </div>""",
     unsafe_allow_html=True,
 )
@@ -158,6 +156,7 @@ PAGE_MODULES = [
     "day_pages.day08_evaluation",
     "day_pages.day09_architecture",
     "day_pages.day10_tool_calling",
+    "day_pages.day11_agents",
 ]
 
 try:
@@ -165,6 +164,9 @@ try:
     page_module.render()
 except Exception as exc:
     st.error(f"Failed to load page: {exc}")
-    with st.expander("Stack trace"):
-        import traceback
-        st.code(traceback.format_exc())
+    if SHOW_TRACEBACKS:
+        with st.expander("Stack trace"):
+            import traceback
+            st.code(traceback.format_exc())
+    else:
+        st.caption("Set HUB_SHOW_TRACEBACKS=1 to see the stack trace.")

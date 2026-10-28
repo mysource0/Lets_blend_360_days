@@ -17,6 +17,8 @@ for env_path in [PROJECT_ROOT / ".env", AI_ENGINEERING_DIR / ".env"]:
         load_dotenv(env_path, override=False)
 
 # ── Defaults ───────────────────────────────────────────────────────────
+# Set HUB_SHOW_TRACEBACKS=1 to show stack traces in the UI (useful when debugging).
+SHOW_TRACEBACKS = os.getenv("HUB_SHOW_TRACEBACKS", "0").strip() == "1"
 DEFAULT_MODEL = os.getenv("OLLAMA_MODEL", "qwen2.5:3b").strip().strip('"')
 DEFAULT_HOST = os.getenv("OLLAMA_HOST", "http://localhost:11434").strip().strip('"')
 
@@ -32,6 +34,7 @@ DAY_DIRS = {
     8:  AI_ENGINEERING_DIR / "08_rag_evaluation",
     9:  AI_ENGINEERING_DIR / "09_fine_tuning",
     10: AI_ENGINEERING_DIR / "10_tool_calling",
+    11: AI_ENGINEERING_DIR / "11_agents",
 }
 
 

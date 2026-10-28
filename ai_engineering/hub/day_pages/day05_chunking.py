@@ -68,7 +68,7 @@ def render():
         overlap = st.slider("Overlap (chars)", 0, 500, 150, 25, key="day05_overlap")
 
     # ── Run chunking ───────────────────────────────────────────────────
-    if st.button("✂️ Parse & Chunk", type="primary", use_container_width=True, key="day05_run"):
+    if st.button("✂️ Parse & Chunk", type="primary", width="stretch", key="day05_run"):
         try:
             with st.spinner("Parsing document…"):
                 documents = chunker.parse_document(str(file_path))

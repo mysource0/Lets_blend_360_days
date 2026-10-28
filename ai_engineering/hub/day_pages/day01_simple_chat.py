@@ -5,9 +5,7 @@ from config import get_ollama_client
 
 
 # Same system instructions as original Day 01 app.py
-SYSTEM_INSTRUCTIONS = """ You are an AI assistant who helps 
-                                employees with their queries. 
-                                Give clear, accurate, and helpful answers. """
+SYSTEM_INSTRUCTIONS = "You are an AI assistant who helps employees with their queries. Give clear, accurate, and helpful answers."
 
 
 def render():
@@ -21,7 +19,7 @@ def render():
     with col_info:
         st.info(f"🤖 Model: **{model}** • Host: `{host}`")
     with col_clear:
-        if st.button("🗑️ Clear Chat", use_container_width=True, key="day01_clear"):
+        if st.button("🗑️ Clear Chat", width="stretch", key="day01_clear"):
             st.session_state.day01_messages = []
             st.rerun()
 

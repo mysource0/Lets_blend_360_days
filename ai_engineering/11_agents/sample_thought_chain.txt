@@ -1,0 +1,22 @@
+﻿Illustrative scripted trace, assuming today is 2026-10-26.
+Live model wording and order may vary.
+
+User: My user ID is E103. Request leave for Pongal.
+
+Loop 1
+  Action:       get_festival_date
+  Action Input: {"festival_name": "Pongal"}
+  Observation:  {"name": "Pongal", "date": "2027-01-14"}
+
+Loop 2
+  Action:       get_available_leave_balance
+  Action Input: {"user_id": "E103"}
+  Observation:  {"user_id": "E103", "name": "Anita", "leave_balance": 5}
+
+Loop 3
+  Action:       create_leave_request
+  Action Input: {"user": "E103", "date": "2027-01-14"}
+  Observation:  Demo leave request printed for E103 on 2027-01-14; nothing was submitted
+
+Loop 4
+  Final Answer: Demo leave request(s) printed for 2027-01-14; nothing was submitted to an HR system.

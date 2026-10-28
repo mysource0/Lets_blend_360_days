@@ -29,7 +29,7 @@ def render():
 
 Build one first:
 ```powershell
-cd d:\\blend\\Lets_blend_360_days\\ai_engineering\\06_embedding_and_retrieval
+cd path\\to\\Lets_blend_360_days\\ai_engineering\\06_embedding_and_retrieval
 python -m src.embeddings.build_embeddings --input ..\\05_document_chunking\\outputs\\employee_policy_md_chunked.json --output-dir outputs\\embeddings\\employee_policy_md_structure
 ```
             """
@@ -52,7 +52,7 @@ python -m src.embeddings.build_embeddings --input ..\\05_document_chunking\\outp
         show_debug = st.checkbox("🐛 Show debug info", key="day07_debug")
 
     # ── Run RAG ────────────────────────────────────────────────────────
-    if st.button("📚 Run RAG Pipeline", type="primary", use_container_width=True, key="day07_run"):
+    if st.button("📚 Run RAG Pipeline", type="primary", width="stretch", key="day07_run"):
         if not question or not question.strip():
             st.warning("Enter a question.")
             return

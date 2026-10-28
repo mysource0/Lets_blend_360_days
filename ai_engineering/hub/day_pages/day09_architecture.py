@@ -74,7 +74,7 @@ def render():
             "Rejected": s.get("rejected_alternative", "?"),
         })
 
-    st.dataframe(table_rows, use_container_width=True, hide_index=True)
+    st.dataframe(table_rows, width="stretch", hide_index=True)
 
     st.divider()
 

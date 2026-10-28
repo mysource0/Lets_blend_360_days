@@ -45,8 +45,8 @@ def test_incomplete_decision_card_is_rejected():
 
 def test_scenario_8_requires_deferred_decision():
     with pytest.raises(ValueError, match="DECISION_DEFERRED"):
-        validate_submission(submission(scenario_id="S08", selected_architecture="FINE_TUNING"))
-    assert validate_submission(submission(scenario_id="S08", selected_architecture="DECISION_DEFERRED"))
+        validate_submission(submission(scenario_id="S08", selected_architecture="FINE_TUNING", rejected_alternative="PROMPT_CONTEXT"))
+    assert validate_submission(submission(scenario_id="S08", selected_architecture="DECISION_DEFERRED", rejected_alternative="PROMPT_CONTEXT"))
 
 
 def test_scenario_6_requires_staged_approach():

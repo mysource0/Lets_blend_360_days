@@ -1,11 +1,12 @@
 """Day 10 — Tool Calling Agent: controlled actions with human confirmation."""
 
+import hashlib
 import json
 import time
 import streamlit as st
 from pathlib import Path
 
-from config import DAY_DIRS, add_day_to_path, get_ollama_client
+from config import DAY_DIRS, SHOW_TRACEBACKS, add_day_to_path, get_ollama_client
 
 
 def render():
@@ -59,69 +60,29 @@ def render():
     # ── Chat input ─────────────────────────────────────────────────────
     if prompt := st.chat_input("Ask about policies or request an action…", key="day10_input"):
         st.session_state.day10_messages.append({"role": "user", "content": prompt})
+        st.session_state.day10_pending_confirm = None
         with st.chat_message("user"):
             st.markdown(prompt)
+        _respond(prompt, model, host, allow_write, use_mock)
 
-        with st.chat_message("assistant"):
-            try:
-                if use_mock:
-                    # Mock mode: simulate tool calling without real Ollama
-                    result = _mock_handle(prompt, allow_write)
-                else:
-                    result = _real_handle(prompt, model, host, allow_write)
-
-                # Display result
-                response_text = result.get("final_response", "No response")
-                ok = result.get("ok", False)
-
-                if ok:
-                    st.markdown(response_text)
-                else:
-                    st.error(response_text)
-                    error = result.get("error", {})
-                    if error:
-                        st.caption(f"Error code: `{error.get('code', '?')}`")
-
-                # Show tool activity
-                activity = result.get("tool_activity", [])
-                if activity:
-                    with st.expander("🔧 Tool Activity", expanded=True):
-                        for act in activity:
-                            tool_name = act.get("tool_name", "?")
-                            tool_result = act.get("result", {})
-                            if tool_name == "lookup_internal_knowledge":
-                                st.markdown(f"**🔍 {tool_name}** (Round {act.get('round', '?')})")
-                                results_list = tool_result.get("results", [])
-                                if results_list:
-                                    for r in results_list:
-                                        st.markdown(f"- Score {r.get('similarity', '?'):.3f}: {r.get('text', '')[:200]}…")
-                                elif tool_result.get("no_results"):
-                                    st.caption("No results found")
-                            elif tool_name == "create_service_request":
-                                st.markdown(f"**✏️ {tool_name}** (Round {act.get('round', '?')})")
-                                status = tool_result.get("status", "?")
-                                if status == "created":
-                                    st.success(f"✅ Created: {tool_result.get('title', '')}")
-                                elif status == "cancelled":
-                                    st.warning("⏹️ Cancelled by user")
-                                elif status == "denied":
-                                    st.error(f"🚫 Denied: {tool_result.get('reason', '')}")
-                                else:
-                                    st.json(tool_result)
-                            else:
-                                st.json(act)
-
+    # ── Approval gate: a write runs only after the user approves this exact proposal ──
+    pending = st.session_state.day10_pending_confirm
+    if pending:
+        with st.container(border=True):
+            st.warning("⏸️ A write action is waiting for your approval. Nothing has been created yet.")
+            st.code(pending["summary"], language="text")
+            col_yes, col_no = st.columns(2)
+            if col_yes.button("✅ Approve and create", type="primary", key="day10_approve", width="stretch"):
+                st.session_state.day10_pending_confirm = None
+                _respond(pending["message"], model, host, allow_write, use_mock, approved_digest=pending["digest"])
+                st.rerun()
+            if col_no.button("✖ Reject", key="day10_reject", width="stretch"):
+                st.session_state.day10_pending_confirm = None
                 st.session_state.day10_messages.append({
                     "role": "assistant",
-                    "content": response_text,
-                    "tool_activity": activity,
+                    "content": "Cancelled. No service request was created.",
                 })
-
-            except Exception as exc:
-                st.error(f"Agent error: {exc}")
-                import traceback
-                with st.expander("Stack trace"):
-                    st.code(traceback.format_exc())
+                st.rerun()
 
     # ── Clear button ───────────────────────────────────────────────────
     if st.button("🗑️ Clear Agent Chat", key="day10_clear"):
@@ -129,7 +90,103 @@ def render():
         st.rerun()
 
 
-def _mock_handle(message: str, allow_write: bool) -> dict:
+def _respond(prompt, model, host, allow_write, use_mock, approved_digest=None):
+    """Run one agent turn, render its reply, and store it in the chat history."""
+    with st.chat_message("assistant"):
+        try:
+            if use_mock:
+                result = _mock_handle(prompt, allow_write, approved_digest)
+            else:
+                result = _real_handle(prompt, model, host, allow_write, approved_digest)
+
+            response_text = result.get("final_response", "No response")
+            ok = result.get("ok", False)
+            activity = result.get("tool_activity", [])
+            if st.session_state.day10_pending_confirm:
+                # The write was held back; the approval panel below decides what happens next.
+                response_text = "⏸️ This action needs your approval. Review the proposal below."
+                ok = True
+                activity = []
+
+            if ok:
+                st.markdown(response_text)
+            else:
+                st.error(response_text)
+                error = result.get("error", {})
+                if error:
+                    st.caption(f"Error code: `{error.get('code', '?')}`")
+
+            if activity:
+                with st.expander("🔧 Tool Activity", expanded=True):
+                    for act in activity:
+                        tool_name = act.get("tool_name", "?")
+                        tool_result = act.get("result", {})
+                        if tool_name == "lookup_internal_knowledge":
+                            st.markdown(f"**🔍 {tool_name}** (Round {act.get('round', '?')})")
+                            results_list = tool_result.get("results", [])
+                            if results_list:
+                                for r in results_list:
+                                    st.markdown(f"- Score {_format_score(r.get('similarity'))}: {r.get('text', '')[:200]}…")
+                            elif tool_result.get("no_results"):
+                                st.caption("No results found")
+                        elif tool_name == "create_service_request":
+                            st.markdown(f"**✏️ {tool_name}** (Round {act.get('round', '?')})")
+                            status = tool_result.get("status", "?")
+                            if status == "created":
+                                st.success(f"✅ Created: {tool_result.get('title', '')}")
+                            elif status == "cancelled":
+                                st.warning("⏹️ Cancelled by user")
+                            elif status == "denied":
+                                st.error(f"🚫 Denied: {tool_result.get('reason', '')}")
+                            else:
+                                st.json(tool_result)
+                        else:
+                            st.json(act)
+
+            st.session_state.day10_messages.append({
+                "role": "assistant",
+                "content": response_text,
+                "tool_activity": activity,
+            })
+
+        except Exception as exc:
+            st.error(f"Agent error: {exc}")
+            if SHOW_TRACEBACKS:
+                import traceback
+                with st.expander("Stack trace"):
+                    st.code(traceback.format_exc())
+
+
+def _format_score(value) -> str:
+    """Format a similarity score, tolerating missing or non-numeric values."""
+    try:
+        return f"{float(value):.3f}"
+    except (TypeError, ValueError):
+        return "n/a"
+
+
+def _digest(text: str) -> str:
+    return hashlib.sha256(text.encode("utf-8")).hexdigest()
+
+
+def _request_approval(message: str, summary: str) -> None:
+    """Hold a write proposal until the user approves this exact summary."""
+    st.session_state.day10_pending_confirm = {
+        "message": message,
+        "summary": summary,
+        "digest": _digest(summary),
+    }
+
+
+MOCK_WRITE_SUMMARY = (
+    "Proposed service request (mock demo):\n"
+    "  Title: Demo service request\n"
+    "  Priority: normal\n"
+    "  Description: Created from the mock backend demo."
+)
+
+
+def _mock_handle(message: str, allow_write: bool, approved_digest: str | None = None) -> dict:
     """Simulated tool calling for demo without Ollama."""
     msg_lower = message.lower()
 
@@ -147,10 +204,13 @@ def _mock_handle(message: str, allow_write: bool) -> dict:
                     "result": {"status": "denied", "reason": "Actor does not have create permission"},
                 }],
             }
+        if approved_digest != _digest(MOCK_WRITE_SUMMARY):
+            _request_approval(message, MOCK_WRITE_SUMMARY)
+            return {"ok": True, "correlation_id": "mock-demo", "final_response": "Waiting for approval.", "tool_activity": []}
         return {
             "ok": True,
             "correlation_id": "mock-demo",
-            "final_response": "Service request created successfully (mock demo). In production, this would require your explicit CONFIRM.",
+            "final_response": "Service request created (mock demo). Nothing was sent to a real system.",
             "tool_activity": [{
                 "round": 1,
                 "call_id": "mock-write",
@@ -278,7 +338,7 @@ def _mock_handle(message: str, allow_write: bool) -> dict:
     }
 
 
-def _real_handle(message: str, model: str, host: str, allow_write: bool) -> dict:
+def _real_handle(message: str, model: str, host: str, allow_write: bool, approved_digest: str | None = None) -> dict:
     """Run the real Day 10 ControlledAssistant."""
     import os
     os.environ["OLLAMA_HOST"] = host
@@ -299,8 +359,11 @@ def _real_handle(message: str, model: str, host: str, allow_write: bool) -> dict
     actor = ActorContext("hub-user", allow_write)
 
     def streamlit_confirm(summary: str) -> bool:
-        """Simple confirmation — always True when allow_write is enabled."""
-        return True
+        """Approve only the exact proposal the user already accepted; otherwise hold it for review."""
+        if approved_digest and _digest(summary) == approved_digest:
+            return True
+        _request_approval(message, summary)
+        return False
 
     assistant = ControlledAssistant(config)
     return assistant.handle(message, actor=actor, confirmation_handler=streamlit_confirm)

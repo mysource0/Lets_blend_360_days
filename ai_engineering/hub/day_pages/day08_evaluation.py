@@ -40,7 +40,7 @@ def render():
             "Question": case.get("question", "")[:80],
         })
 
-    st.dataframe(table_data, use_container_width=True, hide_index=True)
+    st.dataframe(table_data, width="stretch", hide_index=True)
 
     st.divider()
 
@@ -94,7 +94,7 @@ def render():
 
     run_single = st.checkbox("Run only selected case", value=True, key="day08_single")
 
-    if st.button("▶️ Run Evaluation", type="primary", use_container_width=True, key="day08_run"):
+    if st.button("▶️ Run Evaluation", type="primary", width="stretch", key="day08_run"):
         try:
             add_day_to_path(8)
             add_day_to_path(7)  # Day 08 imports Day 07
